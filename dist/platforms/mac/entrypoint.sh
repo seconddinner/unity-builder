@@ -1,28 +1,40 @@
 #!/usr/bin/env bash
 
 #
-# Create directories for license activation
+# Perform Activation
 #
 
-sudo mkdir /Library/Application\ Support/Unity
-sudo chmod -R 777 /Library/Application\ Support/Unity
+if [ "$SKIP_ACTIVATION" != "true" ]; then
+  UNITY_LICENSE_PATH="/Library/Application Support/Unity"
 
-ACTIVATE_LICENSE_PATH="$ACTION_FOLDER/BlankProject"
-mkdir -p "$ACTIVATE_LICENSE_PATH"
+  if [ ! -d "$UNITY_LICENSE_PATH" ]; then
+    echo "Creating Unity License Directory"
+    sudo mkdir -p "$UNITY_LICENSE_PATH"
+    sudo chmod -R 777 "$UNITY_LICENSE_PATH"
+  fi;
+
+  ACTIVATE_LICENSE_PATH="$ACTION_FOLDER/BlankProject"
+  mkdir -p "$ACTIVATE_LICENSE_PATH"
+
+  source $ACTION_FOLDER/platforms/mac/steps/activate.sh
+else
+  echo "Skipping activation"
+fi
 
 #
-# Run steps
+# Run Build
 #
-source $ACTION_FOLDER/platforms/mac/steps/activate.sh
+
 source $ACTION_FOLDER/platforms/mac/steps/build.sh
-source $ACTION_FOLDER/platforms/mac/steps/return_license.sh
 
 #
-# Remove license activation directory
+# License Cleanup
 #
 
-sudo rm -r /Library/Application\ Support/Unity
-rm -r "$ACTIVATE_LICENSE_PATH"
+if [ "$SKIP_ACTIVATION" != "true" ]; then
+  source $ACTION_FOLDER/platforms/mac/steps/return_license.sh
+  rm -r "$ACTIVATE_LICENSE_PATH"
+fi
 
 #
 # Instructions for debugging
@@ -37,7 +49,7 @@ echo ""
 echo "Please note that the exit code is not very descriptive."
 echo "Most likely it will not help you solve the issue."
 echo ""
-echo "To find the reason for failure: please search for errors in the log above."
+echo "To find the reason for failure: please search for errors in the log above and check for annotations in the summary view."
 echo ""
 fi;
 

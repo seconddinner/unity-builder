@@ -31,6 +31,10 @@ inputs:
     required: false
     default: ''
     description: 'Path to a Namespace.Class.StaticMethod to run to perform the build.'
+  manualExit:
+    required: false
+    default: ''
+    description: 'Suppresses `-quit`. Exit your build method using `EditorApplication.Exit(0)` instead.'
   customParameters:
     required: false
     default: ''
@@ -85,6 +89,10 @@ inputs:
     required: false
     default: ''
     description: 'SSH Agent path to forward to the container'
+  sshPublicKeysDirectoryPath:
+    required: false
+    default: ''
+    description: 'Path to a directory containing SSH public keys to forward to the container.'
   gitPrivateToken:
     required: false
     default: ''
@@ -93,11 +101,43 @@ inputs:
     required: false
     default: ''
     description: '[CloudRunner] GitHub owner name or organization/team name'
+  runAsHostUser:
+    required: false
+    default: 'false'
+    description:
+      'Whether to run as a user that matches the host system or the default root container user. Only applicable to
+      Linux hosts and containers. This is useful for fixing permission errors on Self-Hosted runners.'
   chownFilesTo:
     required: false
     default: ''
     description:
       'User and optionally group (user or user:group or uid:gid) to give ownership of the resulting build artifacts'
+  dockerCpuLimit:
+    required: false
+    default: ''
+    description: 'Number of CPU cores to assign the docker container. Defaults to all available cores on all platforms.'
+  dockerMemoryLimit:
+    required: false
+    default: ''
+    description:
+      'Amount of memory to assign the docker container. Defaults to 95% of total system memory rounded down to the
+      nearest megabyte on Linux and 80% on Windows. On unrecognized platforms, defaults to 75% of total system memory.
+      To manually specify a value, use the format <number><unit>, where unit is either m or g. ie: 512m = 512 megabytes'
+  dockerIsolationMode:
+    required: false
+    default: 'default'
+    description:
+      'Isolation mode to use for the docker container. Can be one of process, hyperv, or default. Default will pick the
+      default mode as described by Microsoft where server versions use process and desktop versions use hyperv. Only
+      applicable on Windows'
+  containerRegistryRepository:
+    required: false
+    default: 'unityci/editor'
+    description: 'Container registry and repository to pull image from. Only applicable if customImage is not set.'
+  containerRegistryImageVersion:
+    required: false
+    default: '3'
+    description: 'Container registry image version. Only applicable if customImage is not set.'
   allowDirtyBuild:
     required: false
     default: ''
@@ -146,11 +186,11 @@ inputs:
     description:
       '[CloudRunner] Either local, k8s or aws can be used to run builds on a remote cluster. Additional parameters must
       be configured.'
-  cloudRunnerCpu:
+  containerCpu:
     default: ''
     required: false
     description: '[CloudRunner] Amount of CPU time to assign the remote build container'
-  cloudRunnerMemory:
+  containerMemory:
     default: ''
     required: false
     description: '[CloudRunner] Amount of memory to assign the remote build container'
@@ -213,6 +253,10 @@ inputs:
     description:
       'The path to mount the workspace inside the docker container. For windows, leave out the drive letter. For example
       c:/github/workspace should be defined as /github/workspace'
+  skipActivation:
+    default: 'false'
+    required: false
+    description: 'Skip the activation/deactivation of Unity. This assumes Unity is already activated.'
 
 outputs:
   volume:
@@ -221,9 +265,14 @@ outputs:
     description: 'The generated version used for the Unity build'
   androidVersionCode:
     description: 'The generated versionCode used for the Android Unity build'
+  engineExitCode:
+    description:
+      'Returns the exit code from the build scripts. This code is 0 if the build was successful. If there was an error
+      during activation, the code is from the activation step. If activation is successful, the code is from the project
+      build step.'
 branding:
   icon: 'box'
   color: 'gray-dark'
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'

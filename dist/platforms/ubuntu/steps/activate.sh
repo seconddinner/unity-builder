@@ -1,78 +1,65 @@
 #!/usr/bin/env bash
 
-# Run in ACTIVATE_LICENSE_PATH directory
-echo "Changing to \"$ACTIVATE_LICENSE_PATH\" directory."
-pushd "$ACTIVATE_LICENSE_PATH"
+# if blankproject folder doesn't exist create it
+if [ ! -d "/BlankProject" ]; then
+  mkdir /BlankProject
+fi
+# if blankproject folder doesn't exist create it
+if [ ! -d "/BlankProject/Assets" ]; then
+  mkdir /BlankProject/Assets
+fi
 
-if [[ -n "$UNITY_LICENSE" ]] || [[ -n "$UNITY_LICENSE_FILE" ]]; then
+if [[ -n "$UNITY_SERIAL" && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
   #
-  # PERSONAL LICENSE MODE
+  # SERIAL LICENSE MODE
   #
-  # This will activate Unity, using a license file
+  # This will activate unity, using the serial activation process.
   #
-  # Note that this is the ONLY WAY for PERSONAL LICENSES in 2020.
-  #   * See for more details: https://gitlab.com/gableroux/unity3d-gitlab-ci-example/issues/5#note_72815478
-  #
-  # The license file can be acquired using `webbertakken/request-manual-activation-file` action.
-  echo "Requesting activation (personal license)"
+  echo "Requesting activation"
 
-  # Set the license file path
-  FILE_PATH=UnityLicenseFile.ulf
+  # Loop the unity-editor call until the license is activated with exponential backoff and a maximum of 5 retries
+  retry_count=0
 
-  if [[ -n "$UNITY_LICENSE" ]]; then
-    # Copy license file from Github variables
-    echo "$UNITY_LICENSE" | tr -d '\r' > $FILE_PATH
-  elif [[ -n "$UNITY_LICENSE_FILE" ]]; then
-    # Copy license file from file system
-    cat "$UNITY_LICENSE_FILE" | tr -d '\r' > $FILE_PATH
-  fi
+  # Initialize delay to 15 seconds
+  delay=15
 
-  # Activate license
-  ACTIVATION_OUTPUT=$(unity-editor \
+  # Loop until UNITY_EXIT_CODE is 0 or retry count reaches 5
+  while [[ $retry_count -lt 5 ]]
+  do
+    # Activate license
+    unity-editor \
       -logFile /dev/stdout \
       -quit \
-      -manualLicenseFile $FILE_PATH)
+      -serial "$UNITY_SERIAL" \
+      -username "$UNITY_EMAIL" \
+      -password "$UNITY_PASSWORD" \
+      -projectPath "/BlankProject"
 
-  # Store the exit code from the verify command
-  UNITY_EXIT_CODE=$?
+    # Store the exit code from the verify command
+    UNITY_EXIT_CODE=$?
 
-  # The exit code for personal activation is always 1;
-  # Determine whether activation was successful.
-  #
-  # Successful output should include the following:
-  #
-  #   "LICENSE SYSTEM [2020120 18:51:20] Next license update check is after 2019-11-25T18:23:38"
-  #
-  ACTIVATION_SUCCESSFUL=$(echo $ACTIVATION_OUTPUT | grep 'Next license update check is after' | wc -l)
+    # Check if UNITY_EXIT_CODE is 0
+    if [[ $UNITY_EXIT_CODE -eq 0 ]]
+    then
+      echo "Activation successful"
+      break
+    else
+      # Increment retry count
+      ((retry_count++))
 
-  # Set exit code to 0 if activation was successful
-  if [[ $ACTIVATION_SUCCESSFUL -eq 1 ]]; then
-    UNITY_EXIT_CODE=0
-  fi;
+      echo "::warning ::Activation failed, attempting retry #$retry_count"
+      echo "Activation failed, retrying in $delay seconds..."
+      sleep $delay
 
-  # Remove license file
-  rm -f $FILE_PATH
+      # Double the delay for the next iteration
+      delay=$((delay * 2))
+    fi
+  done
 
-elif [[ -n "$UNITY_SERIAL" && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
-  #
-  # PROFESSIONAL (SERIAL) LICENSE MODE
-  #
-  # This will activate unity, using the activating process.
-  #
-  # Note: This is the preferred way for PROFESSIONAL LICENSES.
-  #
-  echo "Requesting activation (professional license)"
-
-  # Activate license
-  unity-editor \
-    -logFile /dev/stdout \
-    -quit \
-    -serial "$UNITY_SERIAL" \
-    -username "$UNITY_EMAIL" \
-    -password "$UNITY_PASSWORD"
-
-  # Store the exit code from the verify command
-  UNITY_EXIT_CODE=$?
+  if [[ $retry_count -eq 5 ]]
+  then
+    echo "Activation failed after 5 retries"
+  fi
 
 elif [[ -n "$UNITY_LICENSING_SERVER" ]]; then
   #
@@ -97,10 +84,13 @@ else
   #
   echo "License activation strategy could not be determined."
   echo ""
-  echo "Visit https://game.ci/docs/github/getting-started for more"
+  echo "Visit https://game.ci/docs/github/activation for more"
   echo "details on how to set up one of the possible activation strategies."
 
-  # Immediately exit as no UNITY_EXIT_CODE can be derrived.
+  echo "::error ::No valid license activation strategy could be determined. Make sure to provide UNITY_EMAIL, UNITY_PASSWORD, and either a UNITY_SERIAL \
+or UNITY_LICENSE. Otherwise please use UNITY_LICENSING_SERVER. See more info at https://game.ci/docs/github/activation"
+
+  # Immediately exit as no UNITY_EXIT_CODE can be derived.
   exit 1;
 
 fi
@@ -115,8 +105,6 @@ else
   # Activation failed so exit with the code from the license verification step
   echo "Unclassified error occured while trying to activate license."
   echo "Exit code was: $UNITY_EXIT_CODE"
+  echo "::error ::There was an error while trying to activate the Unity license."
   exit $UNITY_EXIT_CODE
 fi
-
-# Return to previous working directory
-popd

@@ -2,8 +2,6 @@ import Platform from './platform';
 
 class ImageTag {
   public repository: string;
-  public name: string;
-  public cloudRunnerBuilderPlatform!: string;
   public editorVersion: string;
   public targetPlatform: string;
   public builderPlatform: string;
@@ -12,7 +10,15 @@ class ImageTag {
   public imagePlatformPrefix: string;
 
   constructor(imageProperties: { [key: string]: string }) {
-    const { editorVersion, targetPlatform, customImage, cloudRunnerBuilderPlatform } = imageProperties;
+    const {
+      editorVersion,
+      targetPlatform,
+      customImage,
+      buildPlatform,
+      containerRegistryRepository,
+      containerRegistryImageVersion,
+      providerStrategy,
+    } = imageProperties;
 
     if (!ImageTag.versionPattern.test(editorVersion)) {
       throw new Error(`Invalid version "${editorVersion}".`);
@@ -23,17 +29,16 @@ class ImageTag {
     this.customImage = customImage;
 
     // Or
-    this.repository = 'unityci';
-    this.name = 'editor';
+    this.repository = containerRegistryRepository;
     this.editorVersion = editorVersion;
     this.targetPlatform = targetPlatform;
-    this.cloudRunnerBuilderPlatform = cloudRunnerBuilderPlatform;
-    const isCloudRunnerLocal = cloudRunnerBuilderPlatform === 'local' || cloudRunnerBuilderPlatform === undefined;
-    this.builderPlatform = ImageTag.getTargetPlatformToTargetPlatformSuffixMap(targetPlatform, editorVersion);
-    this.imagePlatformPrefix = ImageTag.getImagePlatformPrefixes(
-      isCloudRunnerLocal ? process.platform : cloudRunnerBuilderPlatform,
+    this.builderPlatform = ImageTag.getTargetPlatformToTargetPlatformSuffixMap(
+      targetPlatform,
+      editorVersion,
+      providerStrategy,
     );
-    this.imageRollingVersion = 1; // Will automatically roll to the latest non-breaking version.
+    this.imagePlatformPrefix = ImageTag.getImagePlatformPrefixes(buildPlatform);
+    this.imageRollingVersion = Number(containerRegistryImageVersion); // Will automatically roll to the latest non-breaking version.
   }
 
   static get versionPattern(): RegExp {
@@ -58,6 +63,10 @@ class ImageTag {
   }
 
   static getImagePlatformPrefixes(platform: string): string {
+    if (!platform || platform === '') {
+      platform = process.platform;
+    }
+
     switch (platform) {
       case 'win32':
         return 'windows';
@@ -68,7 +77,11 @@ class ImageTag {
     }
   }
 
-  static getTargetPlatformToTargetPlatformSuffixMap(platform: string, version: string): string {
+  static getTargetPlatformToTargetPlatformSuffixMap(
+    platform: string,
+    version: string,
+    providerStrategy: string,
+  ): string {
     const { generic, webgl, mac, windows, windowsIl2cpp, wsaPlayer, linux, linuxIl2cpp, android, ios, tvos, facebook } =
       ImageTag.targetPlatformSuffixes;
 
@@ -86,8 +99,10 @@ class ImageTag {
           if (major >= 2020 || (major === 2019 && minor >= 3)) {
             return windowsIl2cpp;
           } else {
-            throw new Error(`Windows-based builds are only supported on 2019.3.X+ versions of Unity.
-                             If you are trying to build for windows-mono, please use a Linux based OS.`);
+            throw new Error(
+              `Windows-based builds are only supported on 2019.3.X+ versions of Unity.
+                             If you are trying to build for windows-mono, please use a Linux based OS.`,
+            );
           }
         }
 
@@ -95,7 +110,11 @@ class ImageTag {
       case Platform.types.StandaloneLinux64: {
         // Unity versions before 2019.3 do not support il2cpp
         if (major >= 2020 || (major === 2019 && minor >= 3)) {
-          return linuxIl2cpp;
+          if (providerStrategy === 'local') {
+            return linuxIl2cpp;
+          } else {
+            return process.env.USE_IL2CPP === 'true' ? linuxIl2cpp : linux;
+          }
         }
 
         return linux;
@@ -154,7 +173,7 @@ class ImageTag {
   }
 
   get image(): string {
-    return `${this.repository}/${this.name}`.replace(/^\/+/, '');
+    return `${this.repository}`.replace(/^\/+/, '');
   }
 
   toString(): string {
@@ -162,7 +181,8 @@ class ImageTag {
 
     if (customImage) return customImage;
 
-    return `${image}:${tag}`; // '0' here represents the docker repo version
+    return `${image}:${tag}`;
   }
 }
+
 export default ImageTag;

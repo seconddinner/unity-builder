@@ -10,16 +10,17 @@ Part of the <a href="https://game.ci">GameCI</a> open source project.
 <br />
 <br />
 
+## Why did we fork this repo?
+1. Fix bugs with the git command in Windows
+2. When building a client on Windows, if the action is cancelled, the Unity license won't be returned. GameCI does not provide an GitHub action to return license on Windows. We extended the functionality of this action to return license. When the input "customParameters" = "return_license", the action will return the license without building the project.
+
+
 [![Builds - Ubuntu](https://github.com/game-ci/unity-builder/actions/workflows/build-tests-ubuntu.yml/badge.svg)](https://github.com/game-ci/unity-builder/actions/workflows/build-tests-ubuntu.yml)
 [![Builds - Windows](https://github.com/game-ci/unity-builder/actions/workflows/build-tests-windows.yml/badge.svg)](https://github.com/game-ci/unity-builder/actions/workflows/build-tests-windows.yml)
 [![Builds - MacOS](https://github.com/game-ci/unity-builder/actions/workflows/build-tests-mac.yml/badge.svg)](https://github.com/game-ci/unity-builder/actions/workflows/build-tests-mac.yml)
 [![codecov - test coverage](https://codecov.io/gh/game-ci/unity-builder/branch/master/graph/badge.svg)](https://codecov.io/gh/game-ci/unity-builder)
 <br />
 <br />
-
-## Why did we fork this repo?
-1. Fix bugs with the git command in Windows
-2. When building a client on Windows, if the action is cancelled, the Unity license won't be returned. GameCI does not provide an GitHub action to return license on Windows. We extended the functionality of this action to return license. When the input "customParameters" = "return_license", the action will return the license without building the project.
 
 ## How to use
 

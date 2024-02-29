@@ -3,15 +3,13 @@ name: Builds - MacOS
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  buildForAllPlatformsWindows:
+  buildForAllPlatformsMacOS:
     name: ${{ matrix.targetPlatform }} on ${{ matrix.unityVersion }}
     runs-on: macos-latest
     strategy:
@@ -20,30 +18,25 @@ jobs:
         projectPath:
           - test-project
         unityVersion:
-          - 2019.4.40f1 # Minimum version for IL2CPP
-          - 2020.1.17f1
-          - 2020.2.7f1
-          - 2020.3.44f1
-          - 2021.1.28f1
-          - 2021.2.19f1
-          - 2021.3.18f1
-          - 2022.1.24f1
-          - 2022.2.6f1
+          - 2021.3.32f1
+          - 2022.3.13f1
+          - 2023.2.2f1
         targetPlatform:
           - StandaloneOSX # Build a MacOS executable
+          - iOS # Build an iOS executable
 
     steps:
       ###########################
       #         Checkout        #
       ###########################
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
 
       ###########################
       #          Cache          #
       ###########################
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: ${{ matrix.projectPath }}/Library
           key: Library-${{ matrix.projectPath }}-macos-${{ matrix.targetPlatform }}
@@ -67,6 +60,7 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         with:
+          buildName: 'GameCI Test Build'
           projectPath: ${{ matrix.projectPath }}
           unityVersion: ${{ matrix.unityVersion }}
           targetPlatform: ${{ matrix.targetPlatform }}
@@ -77,8 +71,8 @@ jobs:
       ###########################
       #          Upload         #
       ###########################
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          name: Build MacOS (${{ matrix.unityVersion }})
+          name: Build ${{ matrix.targetPlatform }} on MacOS (${{ matrix.unityVersion }})
           path: build
           retention-days: 14
