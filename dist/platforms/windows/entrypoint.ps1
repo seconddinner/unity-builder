@@ -14,6 +14,10 @@ Get-Process -Name regsvr32 | ForEach-Object { Stop-Process -Id $_.Id -Force }
 . "c:\steps\set_gitcredential.ps1"
 
 . "c:\steps\validate_env.ps1"
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Env not set up correctly"
+    exit $LASTEXITCODE
+}
 # Activate Unity
 if ($env:SKIP_ACTIVATION -ne "true") {
   . "c:\steps\activate.ps1"

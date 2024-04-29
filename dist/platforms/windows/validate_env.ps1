@@ -3,8 +3,13 @@
 #
 
 # Check env variables are set
-if(!$Env:CcdApiKey){
+$ccd_key = [Environment]::GetEnvironmentVariable("CcdApiKey", "Machine")
+if(!ccd_key){
   Write-Host "ERROR: CcdApiKey is not set, Addressables content will fail build"
+  $ccd_key = [Environment]::GetEnvironmentVariable("CCD_API_KEY", "Machine")
+  if($ccd_key){
+    Write-Host "Found env:CCD_API_KEY"
+  }
   exit 1
 }
 
