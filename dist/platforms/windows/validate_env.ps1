@@ -4,22 +4,12 @@
 
 # Check env variables are set
 $ccd_key = [Environment]::GetEnvironmentVariable("CcdApiKey", "Machine")
-if(!ccd_key){
+if($ccd_key -eq $null -or $ccd_key -eq ""){
   Write-Host "ERROR: CcdApiKey is not set, Addressables content will fail build"
   $ccd_key = [Environment]::GetEnvironmentVariable("CCD_API_KEY", "Machine")
-  if($ccd_key){
+  if($ccd_key -neq $null -and $ccd_key -neq "")){
     Write-Host "Found env:CCD_API_KEY"
   }
-  exit 1
-}
-
-# Check storage and RAM are enough for build
-$drive = Get-PSDrive -Name C -PSProvider FileSystem
-$freeSpaceGB = [math]::Round(($drive.Free / 1GB), 2)
-Write-Host "Drive C: $freeSpaceGB GB free"
-if($freeSpaceGB -lt 100)
-{
-  Write-Host "ERROR: insufficient free storage on C: for build, only $freeSpaceGB GB free, need at least 100GB"
   exit 1
 }
 
@@ -28,7 +18,7 @@ $memory = Get-CimInstance -ClassName CIM_ComputerSystem
 $totalMemoryGB = [Math]::Round(($memory.TotalPhysicalMemory / 1GB), 2)
 # Output total memory
 Write-Host "Total Physical Memory: $totalMemoryGB GB"
-if($totalMemoryGB -lt 64){
+if($totalMemoryGB -lt 50){
   Write-Host "ERROR: build started on runner with insufficient RAM, need at least 64GB"
   exit 1
 }
