@@ -7,7 +7,7 @@ $ccd_key = [Environment]::GetEnvironmentVariable("CcdApiKey", "Machine")
 if($ccd_key -eq $null -or $ccd_key -eq ""){
   Write-Host "ERROR: CcdApiKey is not set, Addressables content will fail build"
   $ccd_key = [Environment]::GetEnvironmentVariable("CCD_API_KEY", "Machine")
-  if($ccd_key -neq $null -and $ccd_key -neq "")){
+  if($ccd_key -neq $null -and $ccd_key -neq ""){
     Write-Host "Found env:CCD_API_KEY"
   }
   exit 1
@@ -27,7 +27,7 @@ if($totalMemoryGB -lt 50){
 $CPUCount = (Get-WmiObject -Class Win32_ComputerSystem).NumberOfLogicalProcessors
 Write-Host "Number of vCPUs: $CPUCount"
 if($CPUCount -gt 8){
-  Write-Host "ERROR: build started on runner with >8 vCPUs, docker container is likely to fail"
+  Write-Host "ERROR: build started on runner with more than 8 vCPUs, docker container is likely to fail"
   exit 1
 }
 
